@@ -17,3 +17,13 @@
 - 일정 DB에 학부모 공개 checkbox만 배포 전 추가. 기존 20개 속성과 뷰 필터·정렬·기존 표시 순서 일치. 신규 속성은 도구가 뷰에 자동 노출함. 실제 일정 행은 0건이며 임의 데이터 생성·공개 선택 없음.
 - 모의 테스트 104개 통과. 함수 41개 타입검사·회귀 가드·git diff --check 통과. CI·배포 결과는 작업 후 시스템 정보에 확정 기록.
 - 직접 자동화 조회 불가: 출석 개별 웹훅 제거/없음 확인·기본 템플릿 공개 해제·내부 캘린더 숨김 필터·일정 공개 선택·관련 등록 동기화·실사용 검수는 배포 후 운영자 체크리스트로 인계한다. 전체 설치·통합 시험 완료 버전과 코드 패치 상태를 구분한다.
+
+### 실제 배포·검증 결과
+
+- 운영 코드 커밋 3128f4017f80c74a59cb58aca35b437a9ec07cc9. 변경 17개 파일 전부 준비 원문과 커밋 원문 바이트 일치.
+- Supabase Actions https://github.com/cocochip1004-hub/solbit-academy/actions/runs/37791103936 success. 전체 함수 타입 검사·104개 테스트 관련 단계·회귀 가드·마이그레이션 상태·전체 함수 배포·목록 및 기본 Secrets 존재 검사 단계 모두 success. 신규 마이그레이션·Secret 변경 없음.
+- 실제 서버 get-report-fast, sync-attendance, sync-school-calendar ACTIVE version 2 확인. 세 함수 entrypoint 및 변경 공통 모듈 3개, 중복 제외 6개 파일 비교 일치. 전체 41개 함수 소스를 전부 직접 비교했다는 의미는 아님.
+- 실제 sync-attendance pageId/누락 mode 400, 미인증 incremental/reconcile 401 확인. 실제 출석 생성·삭제·캐시 재생성·알림톡 발송 없이 거부 경계만 검증.
+- Notion 일정 학부모 공개 속성 Zl94QA 추가, 기본 템플릿 해제 확인. 일정 메뉴 학원일정 calendar 숨김=false 필터 및 전체 학사일정 검토 표 추가. 기존 출결현황 calendar 보존. 일정 매뉴얼과 웹훅 매핑·예약 안내 반영.
+- Pages Actions https://github.com/cocochip1004-hub/solbit-academy/actions/runs/37791103314 failure, deploy skipped. 원인 미확정. 이번 정적 웹파일 변경 없음. 기존 주요 5개 파일 HTTP200 및 운영 원문과 바이트 일치 확인. 새 Pages 게시 성공을 의미하지 않음.
+- 소유자 요청대로 배포 후 운영자 체크리스트를 Notion 시스템 정보 하위에 제공. 개별 출석 웹훅 제거/해당 없음·일정 공개 선택·관련 등록 동기화·실사용 시험은 운영자 작업 대기. 전체 설치·통합 검증 미완료이므로 전체 운영 완료 버전 v2.2 유지; 적용된 코드 패치는 v2.5.11로 구분.
