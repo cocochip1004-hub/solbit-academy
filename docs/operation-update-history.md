@@ -49,3 +49,10 @@
 ## 운영 연결 원격 준비 완료 — 배포 대기
 
 코드·문서 140개를 update/solbit-v26-staged에 업로드하고 검수본과 바이트 일치를 확인했다. 옛 소스 5개도 후보에서 삭제했다. 이전 로컬 준비 상태 기록을 이 항목으로 갱신한다. 운영 main·DB·함수·Pages는 아직 변경하지 않았다. PNG 2개 추가는 Claude Code 지원 작업으로 인계하며 상세는 docs/updates/solbit-v26-handoff.md를 따른다.
+
+## PNG 보완 완료 — 원격 재검증
+
+- 보완 commit: 1c9d1efcf48ef09348b3a3e3f3ff586fbf3370d7, 브랜치 update/solbit-v26-staged.
+- 제한된 일회성 GitHub Actions 39080801262 성공. 고정 원본 commit에서 PNG 2개만 다운로드하고 해시를 확인한 뒤 커밋했다. 임시 workflow는 같은 보완 커밋에서 제거했다.
+- 운영 AI가 원격에서 두 PNG를 다시 받아 SHA-256과 원본 바이트 일치를 재확인했다. menu-bulk-button.png: 8850b1c9bf89e85a629c78bdc8e2a46889531ac0e5bf6e7879566eeb5a2e9188. hada-wordmark.png: ef8a0f39e1068108ef934295831ecd7a07f2b0c0c977a7b30d60912423b90bbc.
+- 운영 main c3ffa2f26c75af0a02326339880d434912fcc1bd 유지. DB·함수·Pages 배포는 아직 미실행.
