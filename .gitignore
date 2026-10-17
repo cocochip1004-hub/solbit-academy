@@ -1,4 +1,9 @@
+# Secrets and private owner setup links
+*.private.txt
 .env
 .env.*
 !.env.example
 supabase/.temp/
+
+# Python bytecode
+__pycache__/
