@@ -1,4 +1,4 @@
-# 하다 학원관리 (solbit-academy)
+# 하다 학원관리 (project1)
 
 Notion 기반 학원관리 시스템의 백엔드(Supabase Edge Functions)·마이그레이션·운영 웹앱(GitHub Pages) 저장소입니다.
 
@@ -22,7 +22,7 @@ Notion 워크스페이스의 "📘 하다 학원관리 구조·실행 설명서"
 | 검사 | `scripts/check-known-regressions.sh`(회귀 가드), `tests/design-lint.cjs`(디자인 규칙·공용 파일 버전), `tests/admin-security-sql.cjs`, 함수별 `*_test.ts` |
 | 이식 도구 | `scripts/setup-new-academy.py`(원본 주소 초기 치환), `scripts/reset-admin-password.py`(관리자 비밀번호 0000 초기화) |
 
-운영 웹앱 기준 주소: `https://cocochip1004-hub.github.io/solbit-academy/`
+운영 웹앱 기준 주소: `https://hada-notion.github.io/project1/`
 
 ## 배포
 

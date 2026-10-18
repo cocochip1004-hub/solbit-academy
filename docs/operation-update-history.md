@@ -81,3 +81,14 @@
 - 복사본 cr_*4+lib_books 커서 모두존재,first-fill cron행없음. 초기채움 완료지표 확인, 전행대조/shadow검수 완료를 뜻하지 않음.
 - 코드배포v2.6.5·N9/N13·N14매뉴얼은 완료. N10/N12·v2.6.4실사용검수/선생님안내 잔여. v2.6.5선택설정/옛함수삭제/출석전체보정 보류. 전체완료v2.2·코드v2.6.5 유지, v2.7 미적용.
 - v2.7계획: v2.6잔여닫기→운영AI 스냅샷/관계·상태·롤업·보기 준비+원본지원 N2~5/N8~12수식→운영AI 테스트/PR/함수화면Pages배포(새마이그레이션/Secrets없음)→N32표준화먼저→원본지원 N13~29버튼자동화와 운영AI커넥터/매뉴얼→v2.7.4검수/안내. N5수업일9시간더하기 제거,과거제목대량정정은 별도승인.
+
+
+## v2.7.2 — 운영값 보존 병합·배포 요청
+
+- 소유자 승인: 원본 7ac9f34c78cb6a473f39e7f3018e902bdb467338의 v2.7.4 코드 반영. 운영 main 변경 전 0d1e9ca2023ace442900e1ae250f7da1c92046a7. 배포 전 Notion 수식 확인 후 진행.
+- 승인된 원본 대비 차이: send-report·send-daily-report의 REPORT_PATH fallback은 /solbit-academy/student_report.html 유지. deploy-supabase-functions.yml의 DB push·migration list는 기존 SUPABASE_DB_URL Secret Session pooler 단계 유지. 원본 도쿄 pooler·SUPABASE_DB_PASSWORD 경로를 이식하지 않음.
+- hada_config.js 및 기존 마이그레이션 32개 바이트 보존. 학생 등록번호 seed 운영 기준, 운영 전용 문서·기존 예약 워크플로 보존. send-class-daily-reports fallback 및 SQL cron fixture의 운영 URL 유지.
+- 로컬 검사 56단계 통과: 함수43 타입검사, Deno320, SQL보안118, 복사본·cron SQL, 회귀 가드, 디자인 규칙. 모의 오류 응답은 복구/재시도 테스트의 예상 입력이며 실제 운영 장애가 아님.
+- 배포 계획: PR squash 1커밋 → Actions 테스트 → 기존 DB migration push(신규0) → 현행 함수43 배포 → Pages 성공 및 공개파일 대조. 실패 시 자동 재실행하지 않고 성공/실패/미적용 단계·건수를 시스템 정보에 기록.
+- 배포 후 N-32 속성 이름을 먼저 표준화. 등록 교재비 생성 상태는 별개로 보존. 버튼 표시 글자·자동화 이름·N13~29 화면 작업은 원본 지원 인계. 실학생 기록 생성·삭제·실제 발송 시험은 실행하지 않음.
+- 이 커밋 시점은 배포 요청 상태이며 최종 배포·N32 결과는 시스템 정보에 후속 기록한다.
