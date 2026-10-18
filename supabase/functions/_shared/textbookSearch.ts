@@ -110,6 +110,37 @@ export function parsePasted(text: unknown) {
 	return { toc: parseToc(t) }
 }
 
+// ---------- 교보문고 검색 목록에서 가져오기(v2.6.8) ----------
+// 즐겨찾기 [교재 가져오기]는 교보문고 검색 목록에서 체크한 책의 상품번호만 넘긴다(목록 페이지는 상품 쪽 정보를 브라우저가 막는다).
+// 여기서 교보문고 상품 화면이 쓰는 상품 정보 요청 한 곳만 불러 교재명·정가·출판사·목차를 채운다. 사람이 고른 책을 한 권씩만 부른다.
+// 교보문고 내부 요청이라 바뀌거나 막힐 수 있다. 실패하면 502를 돌려주고 화면은 그 책을 목차 없이 둔다.
+const KYOBO_PRODUCT = "https://product.kyobobook.co.kr/api/gw/pdt/v2/product/"
+export async function kyoboBook(body: any) {
+	const pid = String(body?.pid ?? "").trim()
+	if (!/^S\d{9,15}$/.test(pid)) throw new TextbookError(400, "교보문고 상품번호가 아닙니다.")
+	let j: any
+	try {
+		const res = await fetch(KYOBO_PRODUCT + pid, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(8000) })
+		if (!res.ok) throw new Error(`HTTP ${res.status}`)
+		j = await res.json()
+	} catch (err) {
+		console.error("[textbook-api] 교보문고 상품 정보 실패:", pid, (err as Error).message)
+		throw new TextbookError(502, "교보문고에서 책 정보를 받지 못했어요. 책 상세 페이지에서 [교재 가져오기]로 한 권씩 가져오세요.")
+	}
+	const d = j?.data ?? {}
+	const isbn = String(d.info?.cmdtCode ?? "")
+	const price = Number(d.top?.order?.price?.price ?? d.top?.order?.price?.discountPrice ?? 0)
+	const toc = String(d.middle?.contentTableList ?? "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").slice(0, 20000)
+	return {
+		pid,
+		title: String(d.top?.title?.main?.value ?? "").trim().slice(0, 200),
+		isbn13: isIsbn13(isbn) ? isbn : "",
+		price: price > 0 && price < 10_000_000 ? Math.round(price) : null,
+		publisher: String(d.top?.info?.publisher?.label?.text ?? "").trim(),
+		toc: parseToc(toc),
+	}
+}
+
 // 생성 POST는 응답이 끊겨도 중복 페이지가 생기지 않도록 자동 재시도하지 않는다(schoolNotion.ts와 같은 원칙).
 async function createOnce(dataSourceId: string, properties: Record<string, unknown>): Promise<string> {
 	const res = await fetch(`${NOTION_API}/pages`, {
@@ -168,7 +199,7 @@ async function createLibraryBook(b: NewBook) {
 }
 
 // ---------- 직접 추가(v2.5.119) ----------
-// 검색에 없는 교재(학원 자체 교재 등). ISBN·표지·가격은 있을 때만. 표지는 https 주소만.
+// 검색에 없는 교재(학원 자체 교재 등)와 교보문고에서 가져온 교재(v2.6.6). ISBN·표지·가격·쪽수는 있을 때만. 표지는 https 주소만.
 export async function registerCustom(body: any) {
 	const name = String(body?.title ?? "").replace(/\s+/g, " ").trim().slice(0, 200)
 	if (!name) throw new TextbookError(400, "교재명을 입력하세요.")
@@ -177,7 +208,8 @@ export async function registerCustom(body: any) {
 	const cover = String(body?.cover ?? "").trim()
 	if (cover && (!/^https:\/\/[^\s]+$/i.test(cover) || cover.length > 1000)) throw new TextbookError(400, "표지 주소는 https로 시작하는 이미지 주소여야 합니다.")
 	const price = Number(body?.price)
-	return await createLibraryBook({ name, isbn13: isbn13 || undefined, price: price > 0 && price < 10_000_000 ? Math.round(price) : null, cover, units: body?.units, seriesPick: await pickOption(body?.series, "series"), publisherPick: await pickOption(body?.publisher, "publishers") })
+	const pages = Number(body?.pages)
+	return await createLibraryBook({ name, isbn13: isbn13 || undefined, price: price > 0 && price < 10_000_000 ? Math.round(price) : null, pages: pages > 0 && pages < 10_000 ? Math.round(pages) : null, cover, units: body?.units, seriesPick: await pickOption(body?.series, "series"), publisherPick: await pickOption(body?.publisher, "publishers") })
 }
 
 // ---------- 라이브러리 열기(v2.5.118) ----------

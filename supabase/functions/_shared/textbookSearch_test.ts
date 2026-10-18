@@ -16,12 +16,16 @@ const LIB = [
 	{ id: "11111111-1111-4111-8111-111111111111", properties: { "교재명": { title: tt("개념원리 수학 1-1") }, "시리즈": { select: null }, "북커버": { files: [] }, "사용중": { checkbox: false }, "단원목록": { relation: [], has_more: false } } },
 ]
 const UNITS = [{ id: "u2", book: "22222222-2222-4222-8222-222222222222", name: "1-2. 일차부등식", page: 30 }, { id: "u1", book: "22222222-2222-4222-8222-222222222222", name: "1-1. 다항식", page: 8 }, { id: "u3", book: "22222222-2222-4222-8222-222222222222", name: "부록", page: null, exams: 1 }]
-function mock(opts: { existing?: string[]; failUnitAt?: number; nlFail?: boolean; kakaoFail?: boolean; schemaFail?: boolean; seriesOpts?: any[] } = {}) {
+function mock(opts: { existing?: string[]; failUnitAt?: number; nlFail?: boolean; kakaoFail?: boolean; schemaFail?: boolean; seriesOpts?: any[]; kyoboFail?: boolean } = {}) {
 	const created: any[] = [], calls: string[] = [], headers: Record<string, string>[] = [], patched: any[] = [], schema: any[] = []
 	let seriesOpts: any[] = opts.seriesOpts ?? [{ id: "s1", name: "쎈", color: "red" }, { id: "s2", name: "라이트쎈", color: "blue" }]
 	const reply = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status })
 	const fetch = async (input: any, init: any = {}) => {
 		const url = String(input); calls.push(url); headers.push({ ...(init.headers ?? {}) })
+		if (url.startsWith("https://product.kyobobook.co.kr/api/gw/pdt/v2/product/")) {
+			if (opts.kyoboFail) return reply({ message: "blocked" }, 403)
+			return reply({ data: { info: { cmdtCode: "9791166371707" }, top: { title: { main: { value: "120-word READING 2 SB" } }, order: { price: { price: 16000, discountPrice: 14400 } }, info: { publisher: { label: { text: "A List" } } } }, middle: { contentTableList: "1. Rabbit Island\t6\n2. A park or a Lake?\t12<br>3. Dolan's Life Changed!\t18" } } })
+		}
 		if (url.startsWith("https://www.nl.go.kr/seoji/SearchApi.do")) {
 			if (opts.nlFail) return reply({ message: "down" }, 500)
 			const q = new URL(url).searchParams, isbn = q.get("isbn")
@@ -229,10 +233,10 @@ Deno.test("register-custom: title required, optional ISBN/cover/price, https cov
 	await withMock(m, async () => {
 		const r: any = await tb.registerCustom({ title: " 학원 자체 교재 ", units: [{ name: "1. 소개" }] })
 		const p = m.created[0].properties
-		assert(r.ok && r.units === 1 && p["교재명"].title[0].text.content === "학원 자체 교재" && !("ISBN13" in p) && !("북커버" in p) && !("가격" in p), JSON.stringify(p))
-		await tb.registerCustom({ title: "Phonics Monster 1 WB", isbn13: "979-11-6951-337-1", cover: "https://ecimg.cafe24img.com/a/big/1/abc.jpg", price: 5400, publisher: "", units: [] })
+		assert(r.ok && r.units === 1 && p["교재명"].title[0].text.content === "학원 자체 교재" && !("ISBN13" in p) && !("북커버" in p) && !("가격" in p) && !("전체 페이지" in p), JSON.stringify(p))
+		await tb.registerCustom({ title: "Phonics Monster 1 WB", isbn13: "979-11-6951-337-1", cover: "https://ecimg.cafe24img.com/a/big/1/abc.jpg", price: 5400, pages: 286, publisher: "", units: [] })
 		const q = m.created[2].properties
-		assert(q.ISBN13.rich_text[0].text.content === "9791169513371" && q["북커버"].files[0].external.url.endsWith("abc.jpg") && q["가격"].number === 5400 && !("출판사" in q), JSON.stringify(q))
+		assert(q.ISBN13.rich_text[0].text.content === "9791169513371" && q["북커버"].files[0].external.url.endsWith("abc.jpg") && q["가격"].number === 5400 && q["전체 페이지"].number === 286 && !("출판사" in q), JSON.stringify(q))
 		await rejects(() => tb.registerCustom({ title: "", units: [] }), 400)
 		await rejects(() => tb.registerCustom({ title: "x", publisher: "AList", units: [] }), 400, /출판사 선택지에 없는/)
 		await rejects(() => tb.registerCustom({ title: "x", isbn13: "123", units: [] }), 400)
@@ -365,5 +369,19 @@ Deno.test("edit-series: uses the options Notion returns instead of reading the l
 		assert(m.calls.filter((c) => c.endsWith("/data_sources/books")).length - before === 2, "one read before and the PATCH only")
 		const lib = await tb.libraryBooks()
 		assert(lib.seriesOrder.join() === "쎈,라이트쎈,개념원리", "cached series names updated: " + lib.seriesOrder.join())
+	})
+})
+
+Deno.test("kyobo-book: product number only, fixed Kyobo address, title/ISBN/list price/publisher/toc units; failure is 502", async () => {
+	const m = mock()
+	await withMock(m, async () => {
+		const r: any = await tb.kyoboBook({ pid: "S000003945991" })
+		assert(m.calls.at(-1) === "https://product.kyobobook.co.kr/api/gw/pdt/v2/product/S000003945991", m.calls.at(-1))
+		assert(r.title === "120-word READING 2 SB" && r.isbn13 === "9791166371707" && r.price === 16000 && r.publisher === "A List", JSON.stringify(r))
+		assert(r.toc.units.length === 3 && r.toc.units[0].page === 6 && r.toc.units[2].page === 18, JSON.stringify(r.toc.units))
+		for (const pid of ["", "123", "S12", "S000003945991/../x", "https://evil.example", "S0000039459910000000"]) await rejects(() => tb.kyoboBook({ pid }), 400)
+	})
+	await withMock(mock({ kyoboFail: true }), async () => {
+		await rejects(() => tb.kyoboBook({ pid: "S000003945991" }), 502, /교재 가져오기/)
 	})
 })
