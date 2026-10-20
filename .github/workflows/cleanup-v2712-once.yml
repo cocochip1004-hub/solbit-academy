@@ -1,0 +1,45 @@
+name: One-time v2.7.12 obsolete function cleanup
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cleanup-v2712-once.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require successful approved code deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/${{ github.repository }}/actions/runs/39367995460" > "$RUNNER_TEMP/deploy.json"
+          jq -e '.head_sha == "0d68e0a0e48d04dfc2144ca649f65e110552b109" and .conclusion == "success"' "$RUNNER_TEMP/deploy.json"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Delete only twelve explicitly retired functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_ID" = "zidrwdvgmfmuiqggjgzm"
+          supabase functions list --project-ref "$SUPABASE_PROJECT_ID" --output json > "$RUNNER_TEMP/functions-before.json"
+          for name in generate-tuition generate-report sync-exam-scope send-selected-notifications sync-registration-enroll sync-registration-class-session sync-registration-end send-class-daily-reports mark-report-source-dirty sync-registration-timetable sync-student-report sync-school-schedules; do
+            test ! -d "supabase/functions/$name"
+            if jq -e --arg name "$name" 'any(.[]; .slug == $name or .name == $name)' "$RUNNER_TEMP/functions-before.json" > /dev/null; then
+              supabase functions delete "$name" --project-ref "$SUPABASE_PROJECT_ID" --yes
+            else
+              echo "Already absent: $name"
+            fi
+          done
+          supabase functions list --project-ref "$SUPABASE_PROJECT_ID" --output json > "$RUNNER_TEMP/functions-after.json"
+          find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name _shared -printf '%f\n' | sort > "$RUNNER_TEMP/expected.txt"
+          jq -r '.[] | .slug // .name' "$RUNNER_TEMP/functions-after.json" | sort > "$RUNNER_TEMP/actual.txt"
+          diff -u "$RUNNER_TEMP/expected.txt" "$RUNNER_TEMP/actual.txt"
+          test "$(wc -l < "$RUNNER_TEMP/actual.txt")" -eq 35
+          echo 'Verified exact match: 35 functions; no business data operations.'
